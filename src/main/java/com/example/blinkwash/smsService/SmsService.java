@@ -1,17 +1,20 @@
 package com.example.blinkwash.smsService;
 
-import com.example.blinkwash.smsService.BillRequest;
-import com.example.blinkwash.smsService.TwilioConfig;
 import com.twilio.rest.api.v2010.account.Message;
 import com.twilio.type.PhoneNumber;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 @Service
 public class SmsService {
+
+
+    private final Map<String, Map<String, Double>> pricing;
 
     @Autowired
     private TwilioConfig twilioConfig;
@@ -24,6 +27,10 @@ public class SmsService {
     private final double SEDAN_WASH_PRICE = 400;
     private final double SUV_WASH_PRICE = 500;
     private final double LUXURY_WASH_PRICE = 700;
+
+    public SmsService(Map<String, Map<String, Double>> pricing) {
+        this.pricing = pricing;
+    }
 
     public String sendBillSMS(BillRequest billRequest) {
         // Ensure phone number is in E.164 format
@@ -48,44 +55,27 @@ public class SmsService {
         return "Message sent with SID: " + message.getSid();
     }
 
-    private final Map<String, Map<String, Double>> pricing = Map.of(
-            "Hatchback", Map.of("Basic Wash", 200.0, "Premium Wash", 300.0, "Full Detailing", 500.0),
-            "Sedan", Map.of("Basic Wash", 300.0, "Premium Wash", 400.0, "Full Detailing", 600.0),
-            "SUV", Map.of("Basic Wash", 300.0, "Premium Wash", 500.0, "Full Detailing", 700.0),
-            "Luxury", Map.of("Basic Wash", 300.0, "Premium Wash", 600.0, "Full Detailing", 800.0)
-    );
-
-
-//    private double calculatePrice(String carSegment, String washType) {
-//        switch (carSegment) {
-//            case "Hatchback":
-//                return HATCHBACK_WASH_PRICE;
-//            case "Sedan":
-//                return SEDAN_WASH_PRICE;
-//            case "SUV":
-//                return SUV_WASH_PRICE;
-//            case "Luxury":
-//                return LUXURY_WASH_PRICE;
-//            default:
-//                return 0;
-//        }
-//    }
 private double calculatePrice(String carSegment, String washType) {
     return pricing.getOrDefault(carSegment, Map.of()).getOrDefault(washType, 0.0);
 }
     private String generateBillMessage(BillRequest request, double price) {
         return String.format(
-                "Hello %s\n" +
-                        "Thank you for using BlinkWash!\n" +
+                "Hello %s,\n" +
+                        "Thank you for using BlinkWash!\n\n" +
                         "Car Segment: %s\n" +
                         "Wash Type: %s\n" +
-                        "Total Amount: ₹%.2f\n" +
+                        "Bill Date: %s\n" +
+                        "Total Amount: ₹%.2f\n\n" +
                         "We hope to see you again!",
                 request.getName(),
                 request.getCarSegment(),
                 request.getWashType(),
+                getCurrentDate(), // Format date for readability
                 price
         );
     }
 
+    private String getCurrentDate() {
+        return LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
+    }
 }
